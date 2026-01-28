@@ -3,132 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Симуляция очереди к врачам</title>
-    <meta name="description" content="Интерактивная симуляция очереди к врачам с настраиваемыми параметрами"/>
-
-    <!-- Styles -->
-    <link rel="stylesheet" href="css/slides.css">
-    <link rel="stylesheet" href="css/balloon.css">
-
+    <title>Профессиональная симуляция очереди к врачам</title>
+    <meta name="description" content="Интерактивная симуляция системы массового обслуживания M/M/c для моделирования очереди к врачам">
     <style>
         body {
+            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
-            font-family: 'Futura Handwritten', Arial, sans-serif;
+            padding: 20px;
             background: #f0f0f0;
         }
 
-        #container {
-            width: 960px;
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            min-height: 100vh;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
 
-        header {
+        .header {
             background: #2c3e50;
             color: white;
             padding: 20px;
             text-align: center;
         }
 
-        h1 {
+        .header h1 {
             margin: 0;
-            font-size: 2.5em;
+            font-size: 28px;
         }
 
-        .subtitle {
-            font-size: 1.2em;
+        .header p {
+            margin: 10px 0 0 0;
             opacity: 0.8;
-            margin-top: 10px;
+            font-size: 16px;
         }
 
-        #simulation-container {
-            padding: 20px;
+        .content {
+            display: flex;
             min-height: 600px;
         }
 
-        footer {
-            background: #34495e;
-            color: white;
+        .simulation-area {
+            flex: 3;
             padding: 20px;
-            text-align: center;
+            border-right: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .controls-area {
+            flex: 2;
+            padding: 20px;
+            min-width: 400px;
+        }
+
+        #simulationCanvas {
+            border: 1px solid #ddd;
+            background: white;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .legend {
             margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .legend-item {
+            display: inline-block;
+            margin: 0 15px;
+        }
+
+        .legend-color {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        .doctor-color {
+            background: #0000FF;
+        }
+
+        .patient-color {
+            background: #FF0000;
+        }
+
+        .waiting-color {
+            background: #FFA500;
+        }
+
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+
+        .info-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .info-box li {
+            margin: 5px 0;
+        }
+
+        .github-link {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+        }
+
+        .github-link a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        .github-link a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div id="container">
-        <header>
-            <h1>Симуляция очереди к врачам</h1>
-            <div class="subtitle">Интерактивная модель процесса обслуживания пациентов</div>
-        </header>
-
-        <div id="simulation-container">
-            <!-- Здесь будет размещена симуляция -->
-            <div id="queue-simulation"></div>
+    <div class="container">
+        <div class="header">
+            <h1>Профессиональная симуляция очереди к врачам</h1>
+            <p>Моделирование системы массового обслуживания M/M/c с экспоненциальными распределениями</p>
         </div>
 
-        <footer>
-            <p>Создано на основе механики "The Evolution of Trust"</p>
-            <p>© 2024 Симуляция очереди к врачам</p>
-        </footer>
+        <div class="content">
+            <div class="simulation-area">
+                <canvas id="simulationCanvas" width="800" height="500"></canvas>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="legend-color doctor-color"></span>
+                        Врач
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color patient-color"></span>
+                        Пациент на приёме
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color waiting-color"></span>
+                        Пациент в очереди
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>О симуляции</h3>
+                    <ul>
+                        <li><strong>Приход пациентов:</strong> Пуассоновский процесс с интенсивностью λ (пациентов/час)</li>
+                        <li><strong>Время обслуживания:</strong> Экспоненциальное распределение со средним значением</li>
+                        <li><strong>Дисциплина очереди:</strong> FIFO (первым пришел - первым обслужен)</li>
+                        <li><strong>Система:</strong> Многоканальная с общей очередью (M/M/c)</li>
+                        <li><strong>Метрики:</strong> Среднее время ожидания, 95-й перцентиль, загрузка врачей, SLA</li>
+                    </ul>
+                </div>
+
+                <div class="github-link">
+                    <a href="https://github.com/doctor-queue-sim/doctor-queue-sim.github.io" target="_blank">
+                        📁 Исходный код на GitHub
+                    </a>
+                </div>
+            </div>
+
+            <div class="controls-area" id="controlsArea">
+                <!-- Здесь будет создан интерфейс управления через JavaScript -->
+            </div>
+        </div>
     </div>
 
-    <!-- Libraries -->
-    <script src="js/lib/helpers.js"></script>
-    <script src="js/lib/pegasus.js"></script>
-    <script>var c_ = {};</script>
-    <script src="js/lib/minpubsub.src.js"></script>
-    <script src="js/lib/q.js"></script>
+    <!-- Библиотеки -->
     <script src="js/lib/pixi.min.js"></script>
-    <script src="js/lib/howler.js"></script>
-    <script>var createjs = window;</script>
     <script src="js/lib/tweenjs-0.6.2.min.js"></script>
-    <script>Ticker.framerate=60; Ticker.paused=true;</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
+    <script src="js/lib/helpers.js"></script>
 
-    <!-- Core Engine (только необходимые компоненты) -->
-    <script src="js/core/Loader.js"></script>
-    <script src="js/core/Button.js"></script>
-    <script src="js/core/TextBox.js"></script>
-    <script src="js/core/Words.js"></script>
-    <script src="js/core/IncDecNumber.js"></script>
-    <script src="js/core/Slider.js"></script>
-    <script src="js/core/Background.js"></script>
-    <script src="js/core/ImageBox.js"></script>
-
-    <!-- Упрощенная симуляция очереди -->
-    <script src="js/sims/QueueSimulationSimple.js"></script>
-    <script src="js/sims/QueueUISimple.js"></script>
+    <!-- Профессиональная симуляция -->
+    <script src="js/sims/QueueSimulationProfessional.js"></script>
+    <script src="js/sims/QueueUIProfessional.js"></script>
 
     <script>
-        // Упрощенная версия симуляции без слайдов
+        // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
 
-            // Создание контейнера для симуляции
-            var app = new PIXI.Application(900, 500, {
+            // Создание PIXI приложения
+            var app = new PIXI.Application({
+                width: 800,
+                height: 500,
                 backgroundColor: 0xFFFFFF,
-                antialias: true
+                view: document.getElementById('simulationCanvas')
             });
 
-            document.getElementById('queue-simulation').appendChild(app.view);
-
             // Создание симуляции
-            var simulation = new QueueSimulationSimple({
+            var simulation = new QueueSimulationProfessional({
                 app: app
             });
 
             // Создание интерфейса управления
-            var ui = new QueueUISimple({
+            var ui = new QueueUIProfessional({
+                container: document.getElementById('controlsArea'),
                 simulation: simulation
             });
 
-            // Размещение интерфейса рядом с симуляцией
-            document.getElementById('queue-simulation').appendChild(ui.dom);
+            // Добавление обработчика изменения размера окна
+            window.addEventListener('resize', function() {
+                // Можно добавить адаптивность при необходимости
+            });
 
-            // Инициализация симуляции
-            simulation.init(app);
+            console.log('Профессиональная симуляция очереди инициализирована');
+            console.log('Параметры по умолчанию:');
+            console.log('- Интенсивность прихода: ' + simulation.arrivalRatePerHour + ' пациентов/час');
+            console.log('- Среднее время приёма: ' + simulation.meanServiceMinutes + ' минут');
+            console.log('- Количество врачей: ' + simulation.numDoctors);
+            console.log('- Длительность смены: ' + simulation.shiftMinutes + ' минут');
+            console.log('- SLA: ' + simulation.slaMinutes + ' минут');
+
+            // Автоматический запуск через 1 секунду для демонстрации
+            setTimeout(function() {
+                simulation.start();
+            }, 1000);
+
         });
     </script>
 </body>
