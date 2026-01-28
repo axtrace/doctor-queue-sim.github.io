@@ -111,21 +111,18 @@ function QueueUISimple(config){
     );
     controlsContainer.appendChild(doctorsControl);
 
-    // Скорость добавления пациентов
-    var arrivalRateControl = createSliderControl(
-        "Вероятность появления пациента:",
-        self.simulation.patientArrivalRate,
-        0.1,
-        1.0,
-        0.1,
+    // Интервал добавления пациентов
+    var arrivalIntervalControl = createSliderControl(
+        "Интервал появления пациентов (шаги):",
+        self.simulation.patientArrivalInterval,
+        1,
+        10,
+        1,
         function(value){
-            self.simulation.patientArrivalRate = value;
-        },
-        function(value){
-            return (value * 100).toFixed(0) + "%";
+            self.simulation.patientArrivalInterval = value;
         }
     );
-    controlsContainer.appendChild(arrivalRateControl);
+    controlsContainer.appendChild(arrivalIntervalControl);
 
     /////////////////////////////////////////
     // СТАТИСТИКА ///////////////////////////

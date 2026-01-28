@@ -17,7 +17,8 @@ function QueueSimulationSimple(config){
     self.avgWaitTime = 5; // среднее время ожидания (шаги)
     self.avgServiceTime = 3; // среднее время приёма (шаги)
     self.doctorsCount = 2; // количество врачей
-    self.patientArrivalRate = 0.3; // вероятность появления пациента за шаг
+    self.patientArrivalInterval = 3; // интервал между появлениями пациентов (шаги)
+    self.arrivalCounter = 0; // счетчик для интервала
 
     // Состояния
     self.waitingPatients = [];
@@ -90,9 +91,11 @@ function QueueSimulationSimple(config){
     self.step = function(){
         self.currentStep++;
 
-        // Добавление нового пациента с вероятностью
-        if(Math.random() < self.patientArrivalRate){
+        // Добавление нового пациента по интервалу
+        self.arrivalCounter++;
+        if(self.arrivalCounter >= self.patientArrivalInterval){
             self.addPatient();
+            self.arrivalCounter = 0;
         }
 
         // Обслуживание пациентов врачами
@@ -159,6 +162,7 @@ function QueueSimulationSimple(config){
         }
 
         self.currentStep = 0;
+        self.arrivalCounter = 0; // Сброс счетчика интервала
 
         // Вызов callback для обновления UI
         if(self.onReset) self.onReset();
@@ -232,6 +236,12 @@ function QueueDoctorSimple(config){
     g.y = config.y;
     self.graphics = g;
 
+    // Контейнер для пациента на приёме
+    self.patientContainer = new PIXI.Container();
+    self.patientContainer.x = config.x - 50;
+    self.patientContainer.y = config.y;
+    self.simulation.doctorsContainer.addChild(self.patientContainer);
+
     // Начало обслуживания пациента
     self.startService = function(patient){
         self.isBusy = true;
@@ -240,17 +250,24 @@ function QueueDoctorSimple(config){
             self.simulation.avgServiceTime * (0.5 + Math.random())
         ));
 
-        // Перемещение пациента к врачу
+        // Перемещение пациента к врачу и добавление в контейнер приёма
         createjs.Tween.get(patient.graphics).to({
-            x: self.graphics.x - 50,
-            y: self.graphics.y
-        }, 500);
+            x: 0,
+            y: 0
+        }, 500).call(function(){
+            // После завершения анимации добавляем пациента в контейнер врача
+            if(patient.graphics.parent) patient.graphics.parent.removeChild(patient.graphics);
+            self.patientContainer.addChild(patient.graphics);
+        });
     };
 
     // Завершение обслуживания
     self.completeService = function(){
         if(self.currentPatient){
-            // Удаление пациента
+            // Удаление пациента из контейнера врача
+            if(self.currentPatient.graphics.parent) {
+                self.currentPatient.graphics.parent.removeChild(self.currentPatient.graphics);
+            }
             self.currentPatient.remove();
             self.currentPatient = null;
         }
@@ -263,8 +280,16 @@ function QueueDoctorSimple(config){
         self.isBusy = false;
         self.serviceTimeRemaining = 0;
         if(self.currentPatient){
+            // Очистка контейнера пациента
+            if(self.currentPatient.graphics.parent) {
+                self.currentPatient.graphics.parent.removeChild(self.currentPatient.graphics);
+            }
             self.currentPatient.remove();
             self.currentPatient = null;
+        }
+        // Очистка контейнера приёма
+        while(self.patientContainer.children.length > 0){
+            self.patientContainer.removeChildAt(0);
         }
     };
 }
