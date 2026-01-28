@@ -1,53 +1,11 @@
-// Используем существующие изображения персонажей
-var PATIENT_IMAGES = [
-    "peeps/peep/aimee.png",
-    "peeps/peep/alex-d.png",
-    "peeps/peep/andy.png",
-    "peeps/peep/chad.png",
-    "peeps/peep/dylan-f.png",
-    "peeps/peep/jared-c.png",
-    "peeps/peep/josef.png",
-    "peeps/peep/kate.png",
-    "peeps/peep/ljt.png",
-    "peeps/peep/luke.png",
-    "peeps/peep/mark.png",
-    "peeps/peep/matt.png",
-    "peeps/peep/michael_duke.png",
-    "peeps/peep/michael_huff.png",
-    "peeps/peep/natalie.png",
-    "peeps/peep/noel.png",
-    "peeps/peep/pablo.png",
-    "peeps/peep/phil.png",
-    "peeps/peep/sean-r.png",
-    "peeps/peep/serena.png",
-    "peeps/peep/toph-t.png",
-    "peeps/peep/travis.png",
-    "peeps/peep/yu-han.png"
-];
-
-// Добавляем изображения в манифест загрузки
-PATIENT_IMAGES.forEach(function(imagePath) {
-    var key = imagePath.replace(/\//g, '_').replace('.png', '');
-    Loader.addToManifest(Loader.manifest, {
-        [key]: imagePath
-    });
-});
-
-function QueueSimulation(config){
+// Упрощенная версия симуляции очереди для standalone использования
+function QueueSimulationSimple(config){
 
     var self = this;
-    self.id = config.id;
 
     // APP
-    var app = new PIXI.Application(800, 500, {transparent:true, resolution:2});
-    self.dom = app.view;
-
-    // DOM
-    self.dom.className = "object";
-    self.dom.style.width = 800;
-    self.dom.style.height = 500;
-    self.dom.style.left = config.x+"px";
-    self.dom.style.top = config.y+"px";
+    var app = config.app || new PIXI.Application(800, 500, {backgroundColor: 0xFFFFFF});
+    self.app = app;
 
     // Контейнеры
     self.waitingContainer = new PIXI.Container();
@@ -66,11 +24,30 @@ function QueueSimulation(config){
     self.doctors = [];
     self.currentStep = 0;
     self.isAutoPlaying = false;
+    self.autoPlayInterval = null;
+
+    // Инициализация
+    self.init = function(app){
+        if(app) {
+            self.app = app;
+            app.stage.addChild(self.waitingContainer);
+            app.stage.addChild(self.doctorsContainer);
+        }
+        self.initDoctors();
+    };
 
     // Инициализация врачей
     self.initDoctors = function(){
+        // Очистка существующих врачей
+        while(self.doctors.length > 0){
+            var doctor = self.doctors.pop();
+            if(doctor.graphics && doctor.graphics.parent){
+                doctor.graphics.parent.removeChild(doctor.graphics);
+            }
+        }
+
         for(var i=0; i<self.doctorsCount; i++){
-            var doctor = new QueueDoctor({
+            var doctor = new QueueDoctorSimple({
                 id: i,
                 x: 600,
                 y: 100 + i * 120,
@@ -83,7 +60,7 @@ function QueueSimulation(config){
 
     // Добавление пациента в очередь
     self.addPatient = function(){
-        var patient = new QueuePatient({
+        var patient = new QueuePatientSimple({
             id: self.waitingPatients.length,
             simulation: self
         });
@@ -143,21 +120,24 @@ function QueueSimulation(config){
         for(var i=0; i<self.waitingPatients.length; i++){
             self.waitingPatients[i].waitingTime++;
         }
+
+        // Вызов callback для обновления UI
+        if(self.onStep) self.onStep();
     };
 
     // Автоплей
-    var _autoPlayInterval;
     self.startAutoPlay = function(){
         self.isAutoPlaying = true;
-        _autoPlayInterval = setInterval(function(){
+        self.autoPlayInterval = setInterval(function(){
             self.step();
         }, 1000); // шаг каждую секунду
     };
 
     self.stopAutoPlay = function(){
         self.isAutoPlaying = false;
-        if(_autoPlayInterval){
-            clearInterval(_autoPlayInterval);
+        if(self.autoPlayInterval){
+            clearInterval(self.autoPlayInterval);
+            self.autoPlayInterval = null;
         }
     };
 
@@ -179,47 +159,40 @@ function QueueSimulation(config){
         }
 
         self.currentStep = 0;
+
+        // Вызов callback для обновления UI
+        if(self.onReset) self.onReset();
     };
 
-    // Инициализация
+    // Получение статистики
+    self.getStats = function(){
+        var busyDoctors = self.doctors.filter(function(d){ return d.isBusy; }).length;
+        return {
+            step: self.currentStep,
+            waitingPatients: self.waitingPatients.length,
+            busyDoctors: busyDoctors,
+            totalDoctors: self.doctors.length
+        };
+    };
+
+    // Инициализация при создании
     self.initDoctors();
-
-    // События
-    listen(self, "queue/autoplay/start", self.startAutoPlay);
-    listen(self, "queue/autoplay/stop", self.stopAutoPlay);
-    listen(self, "queue/step", self.step);
-    listen(self, "queue/reset", self.reset);
-
-    // Добавление и удаление
-    self.add = function(){
-        _add(self);
-    };
-
-    self.remove = function(){
-        self.stopAutoPlay();
-        for(var i=0; i<self.doctors.length; i++) unlisten(self.doctors[i]);
-        for(var i=0; i<self.waitingPatients.length; i++) unlisten(self.waitingPatients[i]);
-        unlisten(self);
-        app.destroy();
-        _remove(self);
-    };
 
 }
 
-// Класс пациента
-function QueuePatient(config){
+// Упрощенный класс пациента
+function QueuePatientSimple(config){
 
     var self = this;
     self.id = config.id;
     self.simulation = config.simulation;
     self.waitingTime = 0;
 
-    // Графика - случайное изображение пациента
-    var randomImageIndex = Math.floor(Math.random() * PATIENT_IMAGES.length);
-    var imageKey = PATIENT_IMAGES[randomImageIndex].replace(/\//g, '_').replace('.png', '');
-    var g = _makeSprite(imageKey, {width: 60});
-    g.anchor.x = 0.5;
-    g.anchor.y = 0.5;
+    // Графика - простой круг
+    var g = new PIXI.Graphics();
+    g.beginFill(0xFF0000); // Красный цвет для пациента
+    g.drawCircle(0, 0, 15);
+    g.endFill();
     self.graphics = g;
 
     // Позиция в очереди
@@ -236,10 +209,12 @@ function QueuePatient(config){
         if(g.parent) g.parent.removeChild(g);
     };
 
+    // Инициализация позиции
+    self.updatePosition();
 }
 
-// Класс врача
-function QueueDoctor(config){
+// Упрощенный класс врача
+function QueueDoctorSimple(config){
 
     var self = this;
     self.id = config.id;
@@ -248,12 +223,11 @@ function QueueDoctor(config){
     self.currentPatient = null;
     self.serviceTimeRemaining = 0;
 
-    // Графика врача - используем другое изображение
-    var doctorImageIndex = Math.floor(Math.random() * PATIENT_IMAGES.length);
-    var doctorImageKey = PATIENT_IMAGES[doctorImageIndex].replace(/\//g, '_').replace('.png', '');
-    var g = _makeSprite(doctorImageKey, {width: 80});
-    g.anchor.x = 0.5;
-    g.anchor.y = 0.5;
+    // Графика врача - синий круг
+    var g = new PIXI.Graphics();
+    g.beginFill(0x0000FF); // Синий цвет для врача
+    g.drawCircle(0, 0, 20);
+    g.endFill();
     g.x = config.x;
     g.y = config.y;
     self.graphics = g;
@@ -267,7 +241,7 @@ function QueueDoctor(config){
         ));
 
         // Перемещение пациента к врачу
-        Tween_get(patient.graphics).to({
+        createjs.Tween.get(patient.graphics).to({
             x: self.graphics.x - 50,
             y: self.graphics.y
         }, 500);
@@ -276,11 +250,6 @@ function QueueDoctor(config){
     // Завершение обслуживания
     self.completeService = function(){
         if(self.currentPatient){
-            // Удаление пациента из массива ожидания
-            var patientIndex = self.simulation.waitingPatients.indexOf(self.currentPatient);
-            if(patientIndex !== -1){
-                self.simulation.waitingPatients.splice(patientIndex, 1);
-            }
             // Удаление пациента
             self.currentPatient.remove();
             self.currentPatient = null;
@@ -298,5 +267,4 @@ function QueueDoctor(config){
             self.currentPatient = null;
         }
     };
-
 }
