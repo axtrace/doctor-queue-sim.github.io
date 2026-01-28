@@ -2,6 +2,16 @@
 
 #	PLAY IT HERE: [http://ncase.me/trust/](http://ncase.me/trust/)
 
+## Дополнение: Симуляция очереди к врачам
+
+Этот форк оригинального проекта включает дополнительную симуляцию очереди к врачам, созданную на основе игровой механики "The Evolution of Trust".
+
+**Особенности симуляции:**
+- Визуализация процесса обслуживания пациентов
+- Настраиваемые параметры (время ожидания, время приёма, количество врачей)
+- Автоматический и пошаговый режимы работы
+- Статистика в реальном времени
+
 *The Evolution of Trust* is dedicated to the public domain, and is made thanks to the many Creative Commons & open source resources out there! Here is a full list of music, sounds, and code used:
 
 **Music:** "Bleu" by Komiku (CC Zero). [Download their full album on Free Music Archive](http://freemusicarchive.org/music/Komiku/Its_time_for_adventure_/)
@@ -80,14 +90,14 @@ Translations done so far:
 [Esperanto](https://januscahill.github.io/trust/),
 [Thai](http://myhtmlcopy.epizy.com/trust/)
 
-**Step 1)** Fork or download this repo    
+**Step 1)** Fork or download this repo
 (if you're forking it, be sure to make sure *your* repo is on a branch called `gh-pages`, so that GitHub can automatically generate a webpage for it!)
 
 **Step 2)** Translate the following files:
 
-`index.html` -- The title & social sharing text (a few words)    
-`words.html` -- All the words for the interactive itself (~3,300 words)    
-(optional) `notes/index.html` -- The footnotes (~1,100 words)    
+`index.html` -- The title & social sharing text (a few words)
+`words.html` -- All the words for the interactive itself (~3,300 words)
+(optional) `notes/index.html` -- The footnotes (~1,100 words)
 (optional) `peeps/index.html` -- The full credits (a few words)
 
 **Step 3)** Remember to test your translation! You can test things locally using [http-server](https://www.npmjs.com/package/http-server) or [MAMP](https://www.mamp.info/en/).

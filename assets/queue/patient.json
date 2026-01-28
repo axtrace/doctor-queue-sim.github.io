@@ -1,0 +1,21 @@
+{
+    "frames": [
+        {
+            "filename": "patient",
+            "frame": {
+                "x":0,
+                "y":0,
+                "w":100,
+                "h":100
+            }
+        }
+    ],
+    "meta": {
+        "app": "https://www.codeandweb.com/texturepacker",
+        "version": "1.0",
+        "image": "patient.png",
+        "format": "RGBA8888",
+        "size": {"w":100,"h":100},
+        "scale": "1"
+    }
+}

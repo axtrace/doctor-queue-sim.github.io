@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест навигации симуляции очереди</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #status { padding: 10px; margin: 10px 0; border: 1px solid #ccc; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Тест навигации симуляции очереди</h1>
+    <div id="status">Проверка интеграции с основным проектом...</div>
+
+    <script>
+        function logStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.innerHTML = message;
+            status.className = type;
+            console.log(message);
+        }
+
+        // Проверка загрузки основных компонентов
+        setTimeout(() => {
+            try {
+                // Проверка существования SLIDES массива
+                if(typeof SLIDES === 'undefined') {
+                    throw new Error('SLIDES не определен');
+                }
+
+                logStatus('SLIDES массив загружен', 'success');
+
+                // Проверка добавления слайдов очереди
+                const queueSlides = SLIDES.filter(slide =>
+                    slide.id && slide.id.includes('queue')
+                );
+
+                if(queueSlides.length === 0) {
+                    throw new Error('Слайды очереди не добавлены в SLIDES');
+                }
+
+                logStatus(`Найдено ${queueSlides.length} слайдов очереди: ${queueSlides.map(s => s.id).join(', ')}`, 'success');
+
+                // Проверка типов объектов в слайдах
+                let hasQueueSimulation = false;
+                let hasQueueUI = false;
+
+                queueSlides.forEach(slide => {
+                    slide.objects.forEach(obj => {
+                        if(obj.type === 'QueueSimulation') hasQueueSimulation = true;
+                        if(obj.type === 'QueueUI') hasQueueUI = true;
+                    });
+                });
+
+                if(!hasQueueSimulation) {
+                    throw new Error('QueueSimulation не найден в слайдах');
+                }
+                if(!hasQueueUI) {
+                    throw new Error('QueueUI не найден в слайдах');
+                }
+
+                logStatus('Все компоненты симуляции найдены в навигации', 'success');
+
+                // Проверка доступности конструкторов
+                if(typeof QueueSimulation === 'undefined') {
+                    throw new Error('Конструктор QueueSimulation не доступен');
+                }
+                if(typeof QueueUI === 'undefined') {
+                    throw new Error('Конструктор QueueUI не доступен');
+                }
+
+                logStatus('Конструкторы симуляции доступны', 'success');
+
+            } catch (error) {
+                logStatus('Ошибка интеграции: ' + error.message, 'error');
+            }
+        }, 1000);
+    </script>
+
+    <!-- Подключаем все скрипты как в основном проекте -->
+    <script src="js/lib/helpers.js"></script>
+    <script src="js/lib/pegasus.js"></script>
+    <script>var c_ = {};</script>
+    <script src="js/lib/minpubsub.src.js"></script>
+    <script src="js/lib/q.js"></script>
+    <script src="js/lib/pixi.min.js"></script>
+    <script src="js/lib/howler.js"></script>
+    <script>var createjs = window;</script>
+    <script src="js/lib/tweenjs-0.6.2.min.js"></script>
+    <script>Ticker.framerate=60; Ticker.paused=true;</script>
+
+    <!-- Основные слайды проекта -->
+    <script src="js/slides/0_Slides_Intro.js"></script>
+    <script src="js/slides/1_Slides_OneOff.js"></script>
+    <script src="js/slides/2_Slides_Iterated.js"></script>
+    <script src="js/slides/3_Slides_Tournament.js"></script>
+    <script src="js/slides/4_Slides_Evolution.js"></script>
+    <script src="js/slides/5_Slides_Distrust.js"></script>
+    <script src="js/slides/6_Slides_Noise.js"></script>
+    <script src="js/slides/7_Slides_Sandbox.js"></script>
+    <script src="js/slides/8_Slides_Conclusion.js"></script>
+    <script src="js/slides/9_Slides_Credits.js"></script>
+
+    <!-- Слайды очереди -->
+    <script src="js/slides/X_Slides_Queue.js"></script>
+
+    <!-- Симуляции -->
+    <script src="js/sims/QueueSimulation.js"></script>
+    <script src="js/sims/QueueUI.js"></script>
+</body>
+</html>

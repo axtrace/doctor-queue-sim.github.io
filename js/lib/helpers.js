@@ -30,13 +30,13 @@ var _remove = function(self){
 
 // Make Label
 var _makeLabel = function(wordID, config){
-	
+
 	var dom = document.createElement("div");
 	dom.className = "label";
 
 	dom.innerHTML = Words.get(wordID);
 	config = config || {};
-	
+
 	_configText(config, dom);
 
 	return dom;
@@ -150,7 +150,7 @@ function _makeMovieClip(resourceName, options){
 
 	// Make that MovieClip!
 	var resources = PIXI.loader.resources;
-	var resource = resources[resourceName];	
+	var resource = resources[resourceName];
 	if(!resource) throw Error("There's no MovieClip named '"+resourceName+"'!");
 	var numFrames = Object.keys(resource.data.frames).length;
 	var frames = [];
@@ -173,6 +173,11 @@ function _makeMovieClip(resourceName, options){
 	// Gimme
 	return mc;
 
+}
+
+function _scaleToWidth(sprite, targetWidth) {
+	   var scale = targetWidth / sprite.width;
+	   sprite.scale.x = sprite.scale.y = scale;
 }
 
 function _shuffleArray(array) {
