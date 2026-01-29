@@ -4,14 +4,13 @@ function QueueSimulationProfessional(config){
     var self = this;
 
     // APP
-    var app = config.app || new PIXI.Application(800, 500, {backgroundColor: 0xFFFFFF});
-    self.app = app;
+    self.app = config.app || new PIXI.Application(800, 500, {backgroundColor: 0xFFFFFF});
 
     // Контейнеры
     self.waitingContainer = new PIXI.Container();
     self.doctorsContainer = new PIXI.Container();
-    app.stage.addChild(self.waitingContainer);
-    app.stage.addChild(self.doctorsContainer);
+    self.app.stage.addChild(self.waitingContainer);
+    self.app.stage.addChild(self.doctorsContainer);
 
     // Параметры симуляции (входы)
     self.arrivalRatePerHour = 12; // интенсивность прихода (λ) в час

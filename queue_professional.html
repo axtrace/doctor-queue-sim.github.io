@@ -177,10 +177,8 @@
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
 
-            // Создание PIXI приложения
-            var app = new PIXI.Application({
-                width: 800,
-                height: 500,
+            // Создание PIXI приложения (синтаксис PIXI v4)
+            var app = new PIXI.Application(800, 500, {
                 backgroundColor: 0xFFFFFF,
                 view: document.getElementById('simulationCanvas')
             });

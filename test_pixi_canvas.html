@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test PIXI Canvas</title>
+</head>
+<body>
+    <canvas id="testCanvas" width="800" height="500" style="border: 1px solid black;"></canvas>
+
+    <script src="js/lib/pixi.min.js"></script>
+    <script>
+        // Тест 1: Создание PIXI с существующим canvas
+        var canvas = document.getElementById('testCanvas');
+        var app = new PIXI.Application({
+            width: 800,
+            height: 500,
+            backgroundColor: 0xFFFFFF,
+            view: canvas
+        });
+
+        console.log('PIXI app created');
+        console.log('Stage:', app.stage);
+        console.log('Renderer:', app.renderer);
+
+        // Создание синего круга (врач)
+        var doctorGraphics = new PIXI.Graphics();
+        doctorGraphics.beginFill(0x0000FF);
+        doctorGraphics.drawCircle(0, 0, 20);
+        doctorGraphics.endFill();
+        doctorGraphics.x = 600;
+        doctorGraphics.y = 100;
+        app.stage.addChild(doctorGraphics);
+        console.log('Doctor added at', doctorGraphics.x, doctorGraphics.y);
+
+        // Создание красного круга (пациент)
+        var patientGraphics = new PIXI.Graphics();
+        patientGraphics.beginFill(0xFF0000);
+        patientGraphics.drawCircle(0, 0, 15);
+        patientGraphics.endFill();
+        patientGraphics.x = 100;
+        patientGraphics.y = 400;
+        app.stage.addChild(patientGraphics);
+        console.log('Patient added at', patientGraphics.x, patientGraphics.y);
+
+        console.log('Stage children:', app.stage.children.length);
+
+        // Принудительный рендер
+        app.renderer.render(app.stage);
+        console.log('Render called');
+    </script>
+</body>
+</html>
