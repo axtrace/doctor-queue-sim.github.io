@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test PIXI Simple</title>
+</head>
+<body>
+    <h1>Test PIXI v4 Rendering</h1>
+    <div id="pixiContainer"></div>
+
+    <script src="js/lib/pixi.min.js"></script>
+    <script>
+        console.log('Creating PIXI app with v4 syntax...');
+
+        // Правильный синтаксис для PIXI v4
+        var app = new PIXI.Application(800, 500, {
+            backgroundColor: 0xFFFFFF
+        });
+
+        document.getElementById('pixiContainer').appendChild(app.view);
+
+        console.log('PIXI app created');
+        console.log('Stage:', app.stage);
+        console.log('Renderer:', app.renderer);
+
+        // Создание синего круга (врач)
+        var doctorGraphics = new PIXI.Graphics();
+        doctorGraphics.beginFill(0x0000FF);
+        doctorGraphics.drawCircle(0, 0, 20);
+        doctorGraphics.endFill();
+        doctorGraphics.x = 600;
+        doctorGraphics.y = 100;
+        app.stage.addChild(doctorGraphics);
+        console.log('Doctor added at', doctorGraphics.x, doctorGraphics.y);
+
+        // Создание второго синего круга
+        var doctor2Graphics = new PIXI.Graphics();
+        doctor2Graphics.beginFill(0x0000FF);
+        doctor2Graphics.drawCircle(0, 0, 20);
+        doctor2Graphics.endFill();
+        doctor2Graphics.x = 600;
+        doctor2Graphics.y = 220;
+        app.stage.addChild(doctor2Graphics);
+        console.log('Doctor 2 added at', doctor2Graphics.x, doctor2Graphics.y);
+
+        // Создание красного круга (пациент)
+        var patientGraphics = new PIXI.Graphics();
+        patientGraphics.beginFill(0xFF0000);
+        patientGraphics.drawCircle(0, 0, 15);
+        patientGraphics.endFill();
+        patientGraphics.x = 100;
+        patientGraphics.y = 400;
+        app.stage.addChild(patientGraphics);
+        console.log('Patient added at', patientGraphics.x, patientGraphics.y);
+
+        console.log('Stage children:', app.stage.children.length);
+        console.log('All objects added successfully!');
+    </script>
+</body>
+</html>
