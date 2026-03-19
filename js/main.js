@@ -10,13 +10,14 @@ let uiController;
 /**
  * Инициализация приложения
  */
-function initializeApp() {
+async function initializeApp() {
     try {
         // Создаем движок симуляции
         simulationEngine = new SimulationEngine();
 
-        // Создаем визуализатор
+        // Создаем визуализатор и инициализируем его асинхронно
         visualizer = new Visualizer('canvas-container');
+        await visualizer.initialize();
 
         // Создаем контроллер UI
         uiController = new UIController(simulationEngine, visualizer);
@@ -36,9 +37,6 @@ function initializeApp() {
  * Показать приветственное сообщение
  */
 function showWelcomeMessage() {
-    const canvas = visualizer.app.view;
-    const ctx = canvas.getContext('2d');
-
     // Создаем текстовый элемент с инструкциями
     const welcomeText = new PIXI.Text(
         'Добро пожаловать в симуляцию очереди к врачу!\n\n' +

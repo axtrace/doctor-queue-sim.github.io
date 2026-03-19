@@ -18,37 +18,45 @@ class Visualizer {
             queueArea: 0xbdc3c7
         };
 
-        this.initialize();
+        // Не вызываем initialize() здесь - он будет вызван извне как async
     }
 
     /**
      * Инициализировать PixiJS приложение
      */
-    initialize() {
+    async initialize() {
         const width = this.container.clientWidth || 800;
         const height = this.container.clientHeight || 600;
 
-        this.app = new PIXI.Application({
-            width: width,
-            height: height,
-            backgroundColor: this.colors.background,
-            antialias: true
-        });
+        try {
+            // PixiJS 7.x рекомендует async инициализацию
+            this.app = new PIXI.Application();
+            await this.app.init({
+                width: width,
+                height: height,
+                backgroundColor: this.colors.background,
+                antialias: true,
+                preference: 'webgl' // Предпочитаем WebGL, но с автоматическим fallback
+            });
 
-        this.container.appendChild(this.app.view);
+            this.container.appendChild(this.app.canvas);
 
-        // Создаем контейнеры для разных слоев
-        this.backgroundLayer = new PIXI.Container();
-        this.queueLayer = new PIXI.Container();
-        this.doctorLayer = new PIXI.Container();
-        this.patientLayer = new PIXI.Container();
+            // Создаем контейнеры для разных слоев
+            this.backgroundLayer = new PIXI.Container();
+            this.queueLayer = new PIXI.Container();
+            this.doctorLayer = new PIXI.Container();
+            this.patientLayer = new PIXI.Container();
 
-        this.app.stage.addChild(this.backgroundLayer);
-        this.app.stage.addChild(this.queueLayer);
-        this.app.stage.addChild(this.doctorLayer);
-        this.app.stage.addChild(this.patientLayer);
+            this.app.stage.addChild(this.backgroundLayer);
+            this.app.stage.addChild(this.queueLayer);
+            this.app.stage.addChild(this.doctorLayer);
+            this.app.stage.addChild(this.patientLayer);
 
-        this.drawBackground();
+            this.drawBackground();
+        } catch (error) {
+            console.error('Ошибка инициализации PixiJS:', error);
+            throw error;
+        }
     }
 
     /**
