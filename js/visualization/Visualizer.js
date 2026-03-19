@@ -17,8 +17,6 @@ class Visualizer {
             background: 0xecf0f1,
             queueArea: 0xbdc3c7
         };
-
-        // Не вызываем initialize() здесь - он будет вызван извне как async
     }
 
     /**
@@ -29,17 +27,15 @@ class Visualizer {
         const height = this.container.clientHeight || 600;
 
         try {
-            // PixiJS 7.x рекомендует async инициализацию
-            this.app = new PIXI.Application();
-            await this.app.init({
+            // PixiJS 7.3.2 использует синхронный конструктор
+            this.app = new PIXI.Application({
                 width: width,
                 height: height,
                 backgroundColor: this.colors.background,
-                antialias: true,
-                preference: 'webgl' // Предпочитаем WebGL, но с автоматическим fallback
+                antialias: true
             });
 
-            this.container.appendChild(this.app.canvas);
+            this.container.appendChild(this.app.view);
 
             // Создаем контейнеры для разных слоев
             this.backgroundLayer = new PIXI.Container();
