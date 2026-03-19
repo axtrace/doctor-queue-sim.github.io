@@ -30,7 +30,6 @@ class UIController {
         this.simulationTimeEl = document.getElementById('simulationTime');
 
         this.timeScale = 10; // секунд реального времени = 1 час симуляции
-        this.lastUpdateTime = null;
         this.animationFrameId = null;
 
         this.initializeEventListeners();
@@ -170,9 +169,6 @@ class UIController {
         // Сбрасываем движок
         this.engine.reset();
 
-        // Сбрасываем время
-        this.lastUpdateTime = null;
-
         // Обновляем UI
         this.startBtn.disabled = false;
         this.pauseBtn.disabled = true;
@@ -206,42 +202,20 @@ class UIController {
             return;
         }
 
-        const currentTime = Date.now();
-
-        if (this.lastUpdateTime === null) {
-            this.lastUpdateTime = currentTime;
-        }
-
-        const deltaRealTime = (currentTime - this.lastUpdateTime) / 1000; // секунды
-        this.lastUpdateTime = currentTime;
-
-        // Вычисляем, сколько минут симуляции прошло
+        // Вычисляем количество шагов на основе масштаба времени
         // timeScale секунд реального времени = 60 минут симуляции
-        const simulationMinutes = (deltaRealTime / this.timeScale) * 60;
+        // Чем меньше timeScale, тем быстрее симуляция
+        // При timeScale=10: 10 сек реального времени = 60 мин симуляции
+        // Это означает 6 минут симуляции в секунду
+        // При 60 FPS это примерно 0.1 минуты симуляции за кадр
 
-        // Выполняем шаги симуляции до достижения нужного времени
-        let stepsExecuted = 0;
-        const maxStepsPerFrame = 100; // Ограничение для производительности
+        const stepsPerFrame = Math.max(1, Math.floor(60 / this.timeScale));
 
-        while (stepsExecuted < maxStepsPerFrame) {
-            const nextEvent = this.engine.eventQueue.peek();
-            if (!nextEvent) {
-                this.handleStop();
-                return;
-            }
-
-            // Проверяем, не превысили ли мы время для этого кадра
-            const timeUntilNextEvent = nextEvent.time - this.engine.currentTime;
-            if (timeUntilNextEvent > simulationMinutes) {
-                break;
-            }
-
+        for (let i = 0; i < stepsPerFrame; i++) {
             if (!this.engine.step()) {
                 this.handleStop();
                 return;
             }
-
-            stepsExecuted++;
         }
 
         this.animationFrameId = requestAnimationFrame(() => this.runSimulation());
@@ -254,7 +228,6 @@ class UIController {
         this.engine.stop();
         this.startBtn.disabled = false;
         this.pauseBtn.disabled = true;
-        this.lastUpdateTime = null;
 
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
