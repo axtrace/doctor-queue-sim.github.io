@@ -11,7 +11,7 @@ class UIController {
         this.serviceTimeInput = document.getElementById('serviceTime');
         this.numDoctorsInput = document.getElementById('numDoctors');
         this.queueCapacityInput = document.getElementById('queueCapacity');
-        this.simulationSpeedInput = document.getElementById('simulationSpeed');
+        this.timeScaleInput = document.getElementById('timeScale');
 
         // Кнопки управления
         this.startBtn = document.getElementById('startBtn');
@@ -29,7 +29,8 @@ class UIController {
         this.rejectedPatientsEl = document.getElementById('rejectedPatients');
         this.simulationTimeEl = document.getElementById('simulationTime');
 
-        this.simulationSpeed = 5;
+        this.timeScale = 10; // секунд реального времени = 1 час симуляции
+        this.lastUpdateTime = null;
         this.animationFrameId = null;
 
         this.initializeEventListeners();
@@ -77,8 +78,8 @@ class UIController {
             }
         });
 
-        this.simulationSpeedInput.addEventListener('input', () => {
-            this.simulationSpeed = parseInt(this.simulationSpeedInput.value);
+        this.timeScaleInput.addEventListener('input', () => {
+            this.timeScale = parseInt(this.timeScaleInput.value);
             this.updateValueDisplays();
         });
 
@@ -103,8 +104,8 @@ class UIController {
         displays[2].textContent = this.numDoctorsInput.value;
         displays[3].textContent = this.queueCapacityInput.value;
 
-        const speedDisplay = document.querySelector('.speed-control .value-display');
-        speedDisplay.textContent = `${this.simulationSpeed}x`;
+        const timeScaleDisplay = document.querySelector('.speed-control .value-display');
+        timeScaleDisplay.textContent = `${this.timeScale} сек`;
     }
 
     /**
@@ -169,6 +170,9 @@ class UIController {
         // Сбрасываем движок
         this.engine.reset();
 
+        // Сбрасываем время
+        this.lastUpdateTime = null;
+
         // Обновляем UI
         this.startBtn.disabled = false;
         this.pauseBtn.disabled = true;
@@ -202,13 +206,42 @@ class UIController {
             return;
         }
 
-        const stepsPerFrame = this.simulationSpeed;
+        const currentTime = Date.now();
 
-        for (let i = 0; i < stepsPerFrame; i++) {
+        if (this.lastUpdateTime === null) {
+            this.lastUpdateTime = currentTime;
+        }
+
+        const deltaRealTime = (currentTime - this.lastUpdateTime) / 1000; // секунды
+        this.lastUpdateTime = currentTime;
+
+        // Вычисляем, сколько минут симуляции прошло
+        // timeScale секунд реального времени = 60 минут симуляции
+        const simulationMinutes = (deltaRealTime / this.timeScale) * 60;
+
+        // Выполняем шаги симуляции до достижения нужного времени
+        let stepsExecuted = 0;
+        const maxStepsPerFrame = 100; // Ограничение для производительности
+
+        while (stepsExecuted < maxStepsPerFrame) {
+            const nextEvent = this.engine.eventQueue.peek();
+            if (!nextEvent) {
+                this.handleStop();
+                return;
+            }
+
+            // Проверяем, не превысили ли мы время для этого кадра
+            const timeUntilNextEvent = nextEvent.time - this.engine.currentTime;
+            if (timeUntilNextEvent > simulationMinutes) {
+                break;
+            }
+
             if (!this.engine.step()) {
                 this.handleStop();
                 return;
             }
+
+            stepsExecuted++;
         }
 
         this.animationFrameId = requestAnimationFrame(() => this.runSimulation());
@@ -221,6 +254,7 @@ class UIController {
         this.engine.stop();
         this.startBtn.disabled = false;
         this.pauseBtn.disabled = true;
+        this.lastUpdateTime = null;
 
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
