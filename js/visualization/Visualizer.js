@@ -166,46 +166,62 @@ class Visualizer {
         const { doctors } = this._state;
         const doctorStartX = w - 300;
         const doctorY = h / 2;
-        const spacing = 120;
+        const spacing = 130;
 
         doctors.forEach((doctor, index) => {
+            const capacity = doctor.capacity || 1;
+            // Высота кабинета зависит от количества мест
+            const boxH = 80 + Math.ceil(capacity / 2) * 30;
             const x = doctorStartX + (index % 2) * spacing;
-            const y = doctorY - 50 + Math.floor(index / 2) * 130;
+            const y = doctorY - boxH / 2 + Math.floor(index / 2) * (boxH + 20);
             const color = doctor.isBusy ? this.colors.doctorBusy : this.colors.doctorFree;
 
             // Кабинет
             ctx.save();
             ctx.globalAlpha = 0.3;
             ctx.fillStyle = color;
-            this._roundRect(ctx, x, y, 100, 100, 10);
+            this._roundRect(ctx, x, y, 110, boxH, 10);
             ctx.fill();
             ctx.globalAlpha = 1;
             ctx.strokeStyle = color;
             ctx.lineWidth = doctor.isBusy ? 3 : 4;
-            this._roundRect(ctx, x, y, 100, 100, 10);
+            this._roundRect(ctx, x, y, 110, boxH, 10);
             ctx.stroke();
             ctx.restore();
 
             // Иконка врача (круг)
             ctx.beginPath();
-            ctx.arc(x + 50, y + 35, 15, 0, Math.PI * 2);
+            ctx.arc(x + 55, y + 22, 12, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
 
             // Имя
             ctx.fillStyle = this.colors.text;
-            ctx.font = 'bold 13px Arial';
+            ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(`Врач ${doctor.id}`, x + 50, y + 65);
+            ctx.fillText(`Врач ${doctor.id}`, x + 55, y + 44);
 
-            // Статус
+            // Статус: занято мест / всего
+            const occupied = doctor.currentPatients.length;
+            const statusText = capacity > 1
+                ? `${occupied}/${capacity} мест`
+                : (doctor.isBusy ? 'Занят' : 'Свободен');
             ctx.fillStyle = doctor.isBusy ? '#e74c3c' : '#27ae60';
             ctx.font = '11px Arial';
-            ctx.fillText(doctor.isBusy ? 'Занят' : 'Свободен', x + 50, y + 82);
+            ctx.fillText(statusText, x + 55, y + 58);
 
             ctx.textAlign = 'left';
 
-            this.doctorSprites.push({ x, y, doctor });
+            // Сохраняем позиции слотов для пациентов внутри кабинета
+            const slots = [];
+            for (let s = 0; s < capacity; s++) {
+                slots.push({
+                    x: x + 28 + (s % 2) * 30,
+                    y: y + 68 + Math.floor(s / 2) * 28
+                });
+            }
+
+            this.doctorSprites.push({ x, y, boxH, doctor, slots });
         });
     }
 
@@ -363,35 +379,38 @@ class Visualizer {
      * Синхронизировать пациентов у врачей
      */
     _syncPatientsAtDoctors(doctors) {
-        const activeDoctorPatients = new Set(
-            doctors.filter(d => d.currentPatient).map(d => d.currentPatient.id)
-        );
+        const activeDoctorPatients = new Set();
+        doctors.forEach(d => {
+            d.currentPatients.forEach(p => activeDoctorPatients.add(p.id));
+        });
 
         doctors.forEach((doctor, index) => {
-            if (!doctor.currentPatient) return;
-            const patient = doctor.currentPatient;
+            if (doctor.currentPatients.length === 0) return;
             const ds = this.doctorSprites[index];
             if (!ds) return;
 
-            const targetX = ds.x + 50;
-            const targetY = ds.y + 35;
+            doctor.currentPatients.forEach((patient, slotIndex) => {
+                const slot = ds.slots[slotIndex] || ds.slots[ds.slots.length - 1];
+                const targetX = slot.x;
+                const targetY = slot.y;
 
-            if (!this.patientSprites.has(patient.id)) {
-                this.patientSprites.set(patient.id, {
-                    id: patient.id,
-                    x: targetX,
-                    y: targetY,
-                    location: 'doctor',
-                    doctorId: doctor.id
-                });
-            } else {
-                const sprite = this.patientSprites.get(patient.id);
-                if (sprite.location !== 'doctor' || sprite.doctorId !== doctor.id) {
-                    sprite.location = 'doctor';
-                    sprite.doctorId = doctor.id;
-                    this._animateTo(sprite, targetX, targetY);
+                if (!this.patientSprites.has(patient.id)) {
+                    this.patientSprites.set(patient.id, {
+                        id: patient.id,
+                        x: targetX,
+                        y: targetY,
+                        location: 'doctor',
+                        doctorId: doctor.id
+                    });
+                } else {
+                    const sprite = this.patientSprites.get(patient.id);
+                    if (sprite.location !== 'doctor' || sprite.doctorId !== doctor.id) {
+                        sprite.location = 'doctor';
+                        sprite.doctorId = doctor.id;
+                        this._animateTo(sprite, targetX, targetY);
+                    }
                 }
-            }
+            });
         });
 
         // Удаляем пациентов, закончивших обслуживание

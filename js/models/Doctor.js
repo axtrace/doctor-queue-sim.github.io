@@ -2,10 +2,10 @@
  * Класс Doctor - представляет врача в системе
  */
 class Doctor {
-    constructor(id) {
+    constructor(id, capacity = 1) {
         this.id = id;
-        this.isBusy = false;
-        this.currentPatient = null;
+        this.capacity = capacity; // максимальное количество пациентов одновременно
+        this.currentPatients = []; // список текущих пациентов
         this.totalBusyTime = 0; // Общее время занятости
         this.lastBusyStartTime = null; // Время начала последнего периода занятости
         this.patientsServed = 0; // Количество обслуженных пациентов
@@ -15,22 +15,28 @@ class Doctor {
      * Начать обслуживание пациента
      */
     startService(patient, currentTime) {
-        this.isBusy = true;
-        this.currentPatient = patient;
-        this.lastBusyStartTime = currentTime;
+        this.currentPatients.push(patient);
+        // Начинаем отсчёт занятости при первом пациенте
+        if (this.currentPatients.length === 1) {
+            this.lastBusyStartTime = currentTime;
+        }
     }
 
     /**
-     * Завершить обслуживание пациента
+     * Завершить обслуживание конкретного пациента
      */
-    endService(currentTime) {
-        if (this.isBusy && this.lastBusyStartTime !== null) {
-            this.totalBusyTime += (currentTime - this.lastBusyStartTime);
+    endService(patientId, currentTime) {
+        const index = this.currentPatients.findIndex(p => p.id === patientId);
+        if (index !== -1) {
+            this.currentPatients.splice(index, 1);
             this.patientsServed++;
         }
-        this.isBusy = false;
-        this.currentPatient = null;
-        this.lastBusyStartTime = null;
+
+        // Если все пациенты ушли — фиксируем время занятости
+        if (this.currentPatients.length === 0 && this.lastBusyStartTime !== null) {
+            this.totalBusyTime += (currentTime - this.lastBusyStartTime);
+            this.lastBusyStartTime = null;
+        }
     }
 
     /**
@@ -42,7 +48,7 @@ class Doctor {
         let busyTime = this.totalBusyTime;
 
         // Если врач сейчас занят, добавляем текущий период
-        if (this.isBusy && this.lastBusyStartTime !== null) {
+        if (this.currentPatients.length > 0 && this.lastBusyStartTime !== null) {
             busyTime += (totalTime - this.lastBusyStartTime);
         }
 
@@ -50,18 +56,31 @@ class Doctor {
     }
 
     /**
-     * Проверить, свободен ли врач
+     * Проверить, есть ли свободное место у врача
      */
     isAvailable() {
-        return !this.isBusy;
+        return this.currentPatients.length < this.capacity;
+    }
+
+    /**
+     * Проверить, занят ли врач (есть хотя бы один пациент)
+     */
+    get isBusy() {
+        return this.currentPatients.length > 0;
+    }
+
+    /**
+     * Получить первого пациента (для обратной совместимости)
+     */
+    get currentPatient() {
+        return this.currentPatients[0] || null;
     }
 
     /**
      * Сбросить статистику врача
      */
     reset() {
-        this.isBusy = false;
-        this.currentPatient = null;
+        this.currentPatients = [];
         this.totalBusyTime = 0;
         this.lastBusyStartTime = null;
         this.patientsServed = 0;

@@ -11,6 +11,7 @@ class UIController {
         this.serviceTimeInput = document.getElementById('serviceTime');
         this.numDoctorsInput = document.getElementById('numDoctors');
         this.queueCapacityInput = document.getElementById('queueCapacity');
+        this.doctorCapacityInput = document.getElementById('doctorCapacity');
         this.timeScaleInput = document.getElementById('timeScale');
 
         // Кнопки управления
@@ -78,6 +79,15 @@ class UIController {
             }
         });
 
+        this.doctorCapacityInput.addEventListener('input', () => {
+            this.updateValueDisplays();
+            if (this.engine.isRunning) {
+                this.engine.updateParams({
+                    doctorCapacity: parseInt(this.doctorCapacityInput.value)
+                });
+            }
+        });
+
         this.timeScaleInput.addEventListener('input', () => {
             this.timeScale = parseInt(this.timeScaleInput.value);
             this.updateValueDisplays();
@@ -104,6 +114,7 @@ class UIController {
         displays[1].textContent = this.serviceTimeInput.value;
         displays[2].textContent = this.numDoctorsInput.value;
         displays[3].textContent = this.queueCapacityInput.value;
+        displays[4].textContent = this.doctorCapacityInput.value;
 
         const timeScaleDisplay = document.querySelector('.speed-control .value-display');
         timeScaleDisplay.textContent = `${this.timeScale} сек`;
@@ -119,7 +130,8 @@ class UIController {
                 arrivalRate: parseFloat(this.arrivalRateInput.value),
                 serviceTime: parseFloat(this.serviceTimeInput.value),
                 numDoctors: parseInt(this.numDoctorsInput.value),
-                queueCapacity: parseInt(this.queueCapacityInput.value)
+                queueCapacity: parseInt(this.queueCapacityInput.value),
+                doctorCapacity: parseInt(this.doctorCapacityInput.value)
             };
 
             this.engine.initialize(params);
@@ -172,7 +184,8 @@ class UIController {
                 arrivalRate: parseFloat(this.arrivalRateInput.value),
                 serviceTime: parseFloat(this.serviceTimeInput.value),
                 numDoctors: parseInt(this.numDoctorsInput.value),
-                queueCapacity: parseInt(this.queueCapacityInput.value)
+                queueCapacity: parseInt(this.queueCapacityInput.value),
+                doctorCapacity: parseInt(this.doctorCapacityInput.value)
             };
 
             this.engine.initialize(params);

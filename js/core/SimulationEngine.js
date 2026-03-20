@@ -13,7 +13,8 @@ class SimulationEngine {
             arrivalRate: 10,      // пациентов/час
             serviceTime: 15,      // минут (среднее)
             numDoctors: 2,
-            queueCapacity: 10
+            queueCapacity: 10,
+            doctorCapacity: 1     // мест у каждого врача
         };
 
         // Состояние симуляции
@@ -41,7 +42,7 @@ class SimulationEngine {
         // Создаем врачей
         this.doctors = [];
         for (let i = 0; i < this.params.numDoctors; i++) {
-            this.doctors.push(new Doctor(i + 1));
+            this.doctors.push(new Doctor(i + 1, this.params.doctorCapacity));
         }
 
         // Планируем первый приход пациента
@@ -154,7 +155,7 @@ class SimulationEngine {
 
     /**
      * Обработать окончание обслуживания.
-     * Врач освобождается — на следующем шаге придёт пациент из очереди.
+     * Освобождается одно место у врача — если есть очередь, берём следующего.
      */
     handleServiceEnd(event) {
         const { doctorId, patient } = event.data;
@@ -162,15 +163,15 @@ class SimulationEngine {
 
         if (!doctor) return;
 
-        // Завершаем обслуживание
+        // Завершаем обслуживание конкретного пациента
         patient.endService(this.currentTime);
-        doctor.endService(this.currentTime);
+        doctor.endService(patient.id, this.currentTime);
 
         // Добавляем в статистику
         this.statistics.addServedPatient(patient);
 
         // Если есть пациенты в очереди — планируем их вход к врачу через небольшую задержку
-        // чтобы визуализация успела показать врача как свободного
+        // чтобы визуализация успела показать освободившееся место
         if (!this.queue.isEmpty()) {
             const nextPatient = this.queue.dequeue();
             this.eventQueue.schedule(this.currentTime + 1, EventType.SERVICE_START, {
@@ -257,12 +258,13 @@ class SimulationEngine {
     updateParams(params) {
         // Обновляем количество врачей
         if (params.numDoctors !== undefined && params.numDoctors !== this.params.numDoctors) {
+            const capacity = params.doctorCapacity ?? this.params.doctorCapacity;
             const diff = params.numDoctors - this.doctors.length;
 
             if (diff > 0) {
                 // Добавляем врачей
                 for (let i = 0; i < diff; i++) {
-                    this.doctors.push(new Doctor(this.doctors.length + 1));
+                    this.doctors.push(new Doctor(this.doctors.length + 1, capacity));
                 }
             } else if (diff < 0) {
                 // Удаляем врачей (только свободных)
@@ -273,6 +275,13 @@ class SimulationEngine {
                     const index = this.doctors.indexOf(availableDoctors[i]);
                     this.doctors.splice(index, 1);
                 }
+            }
+        }
+
+        // Обновляем вместимость мест у врача
+        if (params.doctorCapacity !== undefined && params.doctorCapacity !== this.params.doctorCapacity) {
+            for (const doctor of this.doctors) {
+                doctor.capacity = params.doctorCapacity;
             }
         }
 
