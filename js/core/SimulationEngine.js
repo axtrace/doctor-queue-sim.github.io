@@ -21,6 +21,9 @@ class SimulationEngine {
         this.isRunning = false;
         this.isPaused = false;
 
+        // Пациент, стоящий на улице (ожидает решения о входе)
+        this.streetPatient = null;
+
         // Callback для обновления визуализации
         this.onUpdate = null;
     }
@@ -53,6 +56,7 @@ class SimulationEngine {
         this.currentTime = 0;
         this.isRunning = false;
         this.isPaused = false;
+        this.streetPatient = null;
         this.statistics.reset();
         Patient.nextId = 1;
 
@@ -86,27 +90,47 @@ class SimulationEngine {
     }
 
     /**
-     * Обработать приход пациента
+     * Шаг 1: пациент появляется на улице.
+     * Планируем следующий приход и событие ENTER (вход в клинику).
      */
     handleArrival() {
         const patient = new Patient(this.currentTime);
+        this.streetPatient = patient;
 
-        // Пытаемся найти свободного врача
-        const availableDoctor = this.doctors.find(d => d.isAvailable());
-
-        if (availableDoctor) {
-            // Врач свободен - начинаем обслуживание сразу
-            this.startService(patient, availableDoctor);
-        } else if (!this.queue.isFull()) {
-            // Врачи заняты, но есть место в очереди
-            this.queue.enqueue(patient);
-        } else {
-            // Очередь полна - отказ
-            this.statistics.addRejection();
-        }
+        // Планируем вход пациента на следующем шаге (время = текущее, чтобы сразу следующим событием)
+        this.eventQueue.schedule(this.currentTime, EventType.ENTER, { patient });
 
         // Планируем следующий приход
         this.scheduleNextArrival();
+    }
+
+    /**
+     * Шаг 2: пациент с улицы принимает решение о входе.
+     * Логика:
+     *   - Если все врачи заняты И очередь пуста → встаёт первым в очередь
+     *   - Если есть свободный врач → идёт к врачу
+     *   - Если врачи заняты, очередь не пуста и есть место → встаёт в очередь
+     *   - Если очередь полна → уходит (отказ)
+     */
+    handleEnter(event) {
+        const { patient } = event.data;
+        this.streetPatient = null;
+
+        const availableDoctor = this.doctors.find(d => d.isAvailable());
+
+        if (availableDoctor) {
+            // Свободный врач есть — идёт сразу к нему
+            this.startService(patient, availableDoctor);
+        } else if (this.queue.isEmpty()) {
+            // Врачи заняты, очередь пуста — встаёт первым в очередь
+            this.queue.enqueue(patient);
+        } else if (!this.queue.isFull()) {
+            // Врачи заняты, очередь не пуста, есть место
+            this.queue.enqueue(patient);
+        } else {
+            // Очередь полна — уходит
+            this.statistics.addRejection();
+        }
     }
 
     /**
@@ -127,7 +151,8 @@ class SimulationEngine {
     }
 
     /**
-     * Обработать окончание обслуживания
+     * Обработать окончание обслуживания.
+     * Врач освобождается — на следующем шаге придёт пациент из очереди.
      */
     handleServiceEnd(event) {
         const { doctorId, patient } = event.data;
@@ -142,10 +167,13 @@ class SimulationEngine {
         // Добавляем в статистику
         this.statistics.addServedPatient(patient);
 
-        // Проверяем, есть ли пациенты в очереди
+        // Если есть пациенты в очереди — планируем их вход к врачу следующим событием
         if (!this.queue.isEmpty()) {
             const nextPatient = this.queue.dequeue();
-            this.startService(nextPatient, doctor);
+            this.eventQueue.schedule(this.currentTime, EventType.SERVICE_START, {
+                doctorId: doctor.id,
+                patient: nextPatient
+            });
         }
     }
 
@@ -158,6 +186,12 @@ class SimulationEngine {
         switch (event.type) {
             case EventType.ARRIVAL:
                 this.handleArrival();
+                break;
+            case EventType.ENTER:
+                this.handleEnter(event);
+                break;
+            case EventType.SERVICE_START:
+                this.handleServiceStart(event);
                 break;
             case EventType.SERVICE_END:
                 this.handleServiceEnd(event);
@@ -249,6 +283,16 @@ class SimulationEngine {
     }
 
     /**
+     * Обработать начало обслуживания (пациент из очереди идёт к освободившемуся врачу)
+     */
+    handleServiceStart(event) {
+        const { doctorId, patient } = event.data;
+        const doctor = this.doctors.find(d => d.id === doctorId);
+        if (!doctor) return;
+        this.startService(patient, doctor);
+    }
+
+    /**
      * Получить текущее состояние симуляции
      */
     getState() {
@@ -258,6 +302,7 @@ class SimulationEngine {
             isPaused: this.isPaused,
             queue: this.queue,
             doctors: this.doctors,
+            streetPatient: this.streetPatient,
             statistics: this.statistics.getFullStatistics(
                 this.doctors,
                 this.currentTime,

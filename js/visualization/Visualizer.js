@@ -14,10 +14,13 @@ class Visualizer {
         this.colors = {
             patient: '#3498db',
             patientWaiting: '#e74c3c',
+            patientStreet: '#9b59b6',
             doctor: '#2ecc71',
             doctorBusy: '#f39c12',
+            doctorFree: '#2ecc71',
             background: '#ecf0f1',
             queueArea: '#bdc3c7',
+            streetArea: '#a8d8ea',
             text: '#2c3e50',
             textLight: '#ffffff'
         };
@@ -50,7 +53,7 @@ class Visualizer {
      */
     _computeQueuePositions() {
         const height = this.canvas.height;
-        const queueX = 150;
+        const queueX = 230;
         const queueStartY = height / 2 - 80;
         const spacing = 35;
 
@@ -86,6 +89,7 @@ class Visualizer {
         ctx.fillStyle = this.colors.background;
         ctx.fillRect(0, 0, w, h);
 
+        this._drawStreetArea(ctx, w, h);
         this._drawQueueArea(ctx, w, h);
         this._drawDoctors(ctx, w, h);
         this._drawPatients(ctx);
@@ -96,12 +100,40 @@ class Visualizer {
     }
 
     /**
+     * Нарисовать зону «Улица» (левая часть)
+     */
+    _drawStreetArea(ctx, w, h) {
+        const x = 10;
+        const y = h / 2 - 60;
+        const rectW = 90;
+        const rectH = 120;
+
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = this.colors.streetArea;
+        this._roundRect(ctx, x, y, rectW, rectH, 10);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#5dade2';
+        ctx.lineWidth = 2;
+        this._roundRect(ctx, x, y, rectW, rectH, 10);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = this.colors.text;
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Улица', x + rectW / 2, y - 8);
+        ctx.textAlign = 'left';
+    }
+
+    /**
      * Нарисовать область очереди
      */
     _drawQueueArea(ctx, w, h) {
-        const x = 50;
+        const x = 120;
         const y = h / 2 - 100;
-        const rectW = 200;
+        const rectW = 140;
         const rectH = 200;
 
         ctx.save();
@@ -117,8 +149,10 @@ class Visualizer {
         ctx.restore();
 
         ctx.fillStyle = this.colors.text;
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText('Очередь', 120, h / 2 - 115);
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Очередь', x + rectW / 2, y - 8);
+        ctx.textAlign = 'left';
     }
 
     /**
@@ -137,7 +171,7 @@ class Visualizer {
         doctors.forEach((doctor, index) => {
             const x = doctorStartX + (index % 2) * spacing;
             const y = doctorY - 50 + Math.floor(index / 2) * 130;
-            const color = doctor.isBusy ? this.colors.doctorBusy : this.colors.doctor;
+            const color = doctor.isBusy ? this.colors.doctorBusy : this.colors.doctorFree;
 
             // Кабинет
             ctx.save();
@@ -147,7 +181,7 @@ class Visualizer {
             ctx.fill();
             ctx.globalAlpha = 1;
             ctx.strokeStyle = color;
-            ctx.lineWidth = 3;
+            ctx.lineWidth = doctor.isBusy ? 3 : 4;
             this._roundRect(ctx, x, y, 100, 100, 10);
             ctx.stroke();
             ctx.restore();
@@ -160,13 +194,13 @@ class Visualizer {
 
             // Имя
             ctx.fillStyle = this.colors.text;
-            ctx.font = 'bold 14px Arial';
+            ctx.font = 'bold 13px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(`Врач ${doctor.id}`, x + 50, y + 65);
 
             // Статус
             ctx.fillStyle = doctor.isBusy ? '#e74c3c' : '#27ae60';
-            ctx.font = '12px Arial';
+            ctx.font = '11px Arial';
             ctx.fillText(doctor.isBusy ? 'Занят' : 'Свободен', x + 50, y + 82);
 
             ctx.textAlign = 'left';
@@ -180,9 +214,14 @@ class Visualizer {
      */
     _drawPatients(ctx) {
         for (const [, sprite] of this.patientSprites.entries()) {
-            const color = sprite.location === 'queue'
-                ? this.colors.patientWaiting
-                : this.colors.patient;
+            let color;
+            if (sprite.location === 'street') {
+                color = this.colors.patientStreet;
+            } else if (sprite.location === 'queue') {
+                color = this.colors.patientWaiting;
+            } else {
+                color = this.colors.patient;
+            }
 
             ctx.beginPath();
             ctx.arc(sprite.x, sprite.y, 12, 0, Math.PI * 2);
@@ -211,7 +250,7 @@ class Visualizer {
         ];
 
         ctx.save();
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 0.9;
         ctx.fillStyle = '#ffffff';
         this._roundRect(ctx, w / 2 - 220, h / 2 - 70, 440, 130, 12);
         ctx.fill();
@@ -251,9 +290,39 @@ class Visualizer {
         if (!state) return;
         this._state = state;
 
-        const { queue, doctors } = state;
+        const { queue, doctors, streetPatient } = state;
+        this._syncStreetPatient(streetPatient);
         this._syncQueue(queue);
         this._syncPatientsAtDoctors(doctors);
+    }
+
+    /**
+     * Синхронизировать пациента на улице
+     */
+    _syncStreetPatient(streetPatient) {
+        const h = this.canvas.height;
+        const streetX = 55;
+        const streetY = h / 2;
+
+        // Удаляем старых street-пациентов, которых больше нет
+        for (const [id, sprite] of this.patientSprites.entries()) {
+            if (sprite.location === 'street') {
+                if (!streetPatient || streetPatient.id !== id) {
+                    this.patientSprites.delete(id);
+                }
+            }
+        }
+
+        if (streetPatient) {
+            if (!this.patientSprites.has(streetPatient.id)) {
+                this.patientSprites.set(streetPatient.id, {
+                    id: streetPatient.id,
+                    x: streetX,
+                    y: streetY,
+                    location: 'street'
+                });
+            }
+        }
     }
 
     /**
@@ -284,6 +353,7 @@ class Visualizer {
                 });
             } else {
                 const sprite = this.patientSprites.get(patient.id);
+                sprite.location = 'queue';
                 this._animateTo(sprite, pos.x, pos.y);
             }
         });

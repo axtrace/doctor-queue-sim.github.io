@@ -100,7 +100,8 @@ class EventQueue {
  * Типы событий
  */
 const EventType = {
-    ARRIVAL: 'ARRIVAL',           // Приход пациента
+    ARRIVAL: 'ARRIVAL',           // Пациент появляется на улице
+    ENTER: 'ENTER',               // Пациент входит (в очередь или к врачу)
     SERVICE_START: 'SERVICE_START', // Начало обслуживания
     SERVICE_END: 'SERVICE_END'      // Окончание обслуживания
 };
