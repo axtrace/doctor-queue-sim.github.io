@@ -156,6 +156,42 @@ class Visualizer {
     }
 
     /**
+     * Вычислить геометрию кабинета врача по индексу
+     */
+    _getDoctorLayout(doctor, index) {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const doctorStartX = w - 310;
+        const doctorY = h / 2;
+        const spacing = 140;
+
+        const capacity = doctor.capacity || 1;
+        const cols = Math.min(capacity, 2);
+        const rows = Math.ceil(capacity / cols);
+
+        const slotW = 36;
+        const slotH = 28;
+        const slotPadX = 8;
+        const slotPadY = 8;
+
+        const boxW = slotPadX * 2 + cols * slotW + (cols - 1) * 6;
+        const boxH = 50 + rows * (slotH + slotPadY);
+        const x = doctorStartX + (index % 2) * spacing;
+        const y = doctorY - boxH / 2 + Math.floor(index / 2) * (boxH + 20);
+
+        const slots = [];
+        for (let s = 0; s < capacity; s++) {
+            const col = s % cols;
+            const row = Math.floor(s / cols);
+            const slotX = x + slotPadX + col * (slotW + 6);
+            const slotY = y + 42 + row * (slotH + slotPadY);
+            slots.push({ x: slotX + slotW / 2, y: slotY + slotH / 2, slotX, slotY, slotW, slotH });
+        }
+
+        return { x, y, boxW, boxH, cols, rows, slots, slotPadX, slotPadY, slotW, slotH };
+    }
+
+    /**
      * Нарисовать врачей
      */
     _drawDoctors(ctx, w, h) {
@@ -164,25 +200,10 @@ class Visualizer {
         if (!this._state) return;
 
         const { doctors } = this._state;
-        const doctorStartX = w - 310;
-        const doctorY = h / 2;
-        const spacing = 140;
 
         doctors.forEach((doctor, index) => {
-            const capacity = doctor.capacity || 1;
-            const cols = Math.min(capacity, 2);
-            const rows = Math.ceil(capacity / cols);
-
-            const slotW = 36;
-            const slotH = 28;
-            const slotPadX = 8;
-            const slotPadY = 8;
-
-            // Высота кабинета: заголовок (50px) + строки слотов
-            const boxW = slotPadX * 2 + cols * slotW + (cols - 1) * 6;
-            const boxH = 50 + rows * (slotH + slotPadY);
-            const x = doctorStartX + (index % 2) * spacing;
-            const y = doctorY - boxH / 2 + Math.floor(index / 2) * (boxH + 20);
+            const layout = this._getDoctorLayout(doctor, index);
+            const { x, y, boxW, boxH, slots } = layout;
             const color = doctor.isBusy ? this.colors.doctorBusy : this.colors.doctorFree;
 
             // Кабинет
@@ -212,31 +233,21 @@ class Visualizer {
             ctx.textAlign = 'left';
 
             // Слоты-зоны для мест (стульев)
-            const slots = [];
-            for (let s = 0; s < capacity; s++) {
-                const col = s % cols;
-                const row = Math.floor(s / cols);
-                const slotX = x + slotPadX + col * (slotW + 6);
-                const slotY = y + 42 + row * (slotH + slotPadY);
-                const centerX = slotX + slotW / 2;
-                const centerY = slotY + slotH / 2;
-                slots.push({ x: centerX, y: centerY });
-
+            slots.forEach((slot, s) => {
                 const isOccupied = s < doctor.currentPatients.length;
 
-                // Зона-слот (прямоугольник)
                 ctx.save();
                 ctx.fillStyle = isOccupied ? 'rgba(230, 126, 34, 0.25)' : 'rgba(189, 195, 199, 0.35)';
-                this._roundRect(ctx, slotX, slotY, slotW, slotH, 6);
+                this._roundRect(ctx, slot.slotX, slot.slotY, slot.slotW, slot.slotH, 6);
                 ctx.fill();
                 ctx.strokeStyle = isOccupied ? '#e67e22' : '#b2bec3';
                 ctx.lineWidth = isOccupied ? 2 : 1.5;
                 ctx.setLineDash(isOccupied ? [] : [4, 3]);
-                this._roundRect(ctx, slotX, slotY, slotW, slotH, 6);
+                this._roundRect(ctx, slot.slotX, slot.slotY, slot.slotW, slot.slotH, 6);
                 ctx.stroke();
                 ctx.setLineDash([]);
                 ctx.restore();
-            }
+            });
 
             this.doctorSprites.push({ x, y, boxW, boxH, doctor, slots });
         });
@@ -403,11 +414,12 @@ class Visualizer {
 
         doctors.forEach((doctor, index) => {
             if (doctor.currentPatients.length === 0) return;
-            const ds = this.doctorSprites[index];
-            if (!ds) return;
+
+            // Вычисляем layout напрямую, не полагаясь на doctorSprites
+            const layout = this._getDoctorLayout(doctor, index);
 
             doctor.currentPatients.forEach((patient, slotIndex) => {
-                const slot = ds.slots[slotIndex] || ds.slots[ds.slots.length - 1];
+                const slot = layout.slots[slotIndex] || layout.slots[layout.slots.length - 1];
                 const targetX = slot.x;
                 const targetY = slot.y;
 

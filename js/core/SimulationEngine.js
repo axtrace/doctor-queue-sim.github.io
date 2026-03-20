@@ -108,27 +108,49 @@ class SimulationEngine {
     }
 
     /**
+     * Выбрать врача для нового пациента по приоритету:
+     * 1. Врач без пациентов (первый стул свободен) — берём первого такого
+     * 2. Если все первые стулья заняты — берём врача с наименьшим lastBusyStartTime
+     *    (у кого раньше всех сел первый пациент) и у которого есть свободное место
+     * @returns {Doctor|null}
+     */
+    _selectDoctor() {
+        // Приоритет 1: врач без пациентов вообще
+        const freeDoctor = this.doctors.find(d => d.currentPatients.length === 0);
+        if (freeDoctor) return freeDoctor;
+
+        // Приоритет 2: врач с наименьшим lastBusyStartTime и свободным местом
+        let bestDoctor = null;
+        let earliestStart = Infinity;
+        for (const doctor of this.doctors) {
+            if (doctor.isAvailable() && doctor.lastBusyStartTime !== null) {
+                if (doctor.lastBusyStartTime < earliestStart) {
+                    earliestStart = doctor.lastBusyStartTime;
+                    bestDoctor = doctor;
+                }
+            }
+        }
+        return bestDoctor;
+    }
+
+    /**
      * Шаг 2: пациент с улицы принимает решение о входе.
      * Логика:
-     *   - Если все врачи заняты И очередь пуста → встаёт первым в очередь
-     *   - Если есть свободный врач → идёт к врачу
-     *   - Если врачи заняты, очередь не пуста и есть место → встаёт в очередь
+     *   - Если есть свободный врач → идёт к врачу (по приоритету)
+     *   - Если все врачи заняты → встаёт в очередь (если есть место)
      *   - Если очередь полна → уходит (отказ)
      */
     handleEnter(event) {
         const { patient } = event.data;
         this.streetPatient = null;
 
-        const availableDoctor = this.doctors.find(d => d.isAvailable());
+        const selectedDoctor = this._selectDoctor();
 
-        if (availableDoctor) {
-            // Свободный врач есть — идёт сразу к нему
-            this.startService(patient, availableDoctor);
-        } else if (this.queue.isEmpty()) {
-            // Врачи заняты, очередь пуста — встаёт первым в очередь
-            this.queue.enqueue(patient);
+        if (selectedDoctor) {
+            // Свободный врач найден — идёт к нему
+            this.startService(patient, selectedDoctor);
         } else if (!this.queue.isFull()) {
-            // Врачи заняты, очередь не пуста, есть место
+            // Все места у всех врачей заняты — встаёт в очередь
             this.queue.enqueue(patient);
         } else {
             // Очередь полна — уходит
