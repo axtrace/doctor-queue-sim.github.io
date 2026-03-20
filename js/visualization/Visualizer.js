@@ -27,14 +27,14 @@ class Visualizer {
         const height = this.container.clientHeight || 600;
 
         try {
-            // Для PixiJS 7 и некоторых окружений GitHub Pages нужна явная async-инициализация
+            // Для PixiJS 7 и некоторых окружений GitHub Pages нужна явная async-инициализация.
+            // Не фиксируем renderer как WebGL: в части браузеров/окружений auto-detect выбирает доступный вариант сам.
             this.app = new PIXI.Application();
             await this.app.init({
                 width: width,
                 height: height,
                 backgroundColor: this.colors.background,
-                antialias: true,
-                preference: 'webgl'
+                antialias: true
             });
 
             this.container.appendChild(this.app.canvas || this.app.view);
