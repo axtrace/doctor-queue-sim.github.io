@@ -51,14 +51,15 @@ class Visualizer {
     /**
      * Вычислить позиции слотов очереди
      */
-    _computeQueuePositions() {
+    _computeQueuePositions(count = 10) {
         const height = this.canvas.height;
         const queueX = 230;
         const queueStartY = height / 2 - 80;
         const spacing = 35;
 
         this.queuePositions = [];
-        for (let i = 0; i < 10; i++) {
+        const total = Math.max(count, 10);
+        for (let i = 0; i < total; i++) {
             this.queuePositions.push({
                 x: queueX,
                 y: queueStartY + i * spacing
@@ -89,8 +90,9 @@ class Visualizer {
         ctx.fillStyle = this.colors.background;
         ctx.fillRect(0, 0, w, h);
 
+        const queueCount = this._state ? this._state.queue.getLength() : 0;
         this._drawStreetArea(ctx, w, h);
-        this._drawQueueArea(ctx, w, h);
+        this._drawQueueArea(ctx, w, h, queueCount);
         this._drawDoctors(ctx, w, h);
         this._drawPatients(ctx);
 
@@ -130,11 +132,17 @@ class Visualizer {
     /**
      * Нарисовать область очереди
      */
-    _drawQueueArea(ctx, w, h) {
+    _drawQueueArea(ctx, w, h, queueCount = 0) {
+        const spacing = 35;
+        const paddingTop = 20;
+        const paddingBottom = 16;
+        const minSlots = 5;
+        const slots = Math.max(minSlots, queueCount);
+
         const x = 120;
-        const y = h / 2 - 100;
         const rectW = 140;
-        const rectH = 200;
+        const rectH = paddingTop + slots * spacing + paddingBottom;
+        const y = h / 2 - rectH / 2;
 
         ctx.save();
         ctx.globalAlpha = 0.3;
@@ -370,6 +378,25 @@ class Visualizer {
     }
 
     /**
+     * Вычислить позицию пациента в очереди по индексу (динамически)
+     */
+    _getQueueSlotPosition(index) {
+        const h = this.canvas.height;
+        const spacing = 35;
+        const paddingTop = 20;
+        const minSlots = 5;
+        const queueCount = this._state ? this._state.queue.getLength() : 0;
+        const slots = Math.max(minSlots, queueCount);
+        const rectH = paddingTop + slots * spacing + 16;
+        const y = h / 2 - rectH / 2;
+
+        return {
+            x: 230,
+            y: y + paddingTop + index * spacing + spacing / 2
+        };
+    }
+
+    /**
      * Синхронизировать пациентов в очереди
      */
     _syncQueue(queue) {
@@ -385,8 +412,7 @@ class Visualizer {
 
         // Добавляем/обновляем
         patients.forEach((patient, index) => {
-            if (index >= this.queuePositions.length) return;
-            const pos = this.queuePositions[index];
+            const pos = this._getQueueSlotPosition(index);
 
             if (!this.patientSprites.has(patient.id)) {
                 this.patientSprites.set(patient.id, {

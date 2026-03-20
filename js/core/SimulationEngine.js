@@ -22,6 +22,9 @@ class SimulationEngine {
         this.isRunning = false;
         this.isPaused = false;
 
+        // Флаг пошагового режима (влияет на задержку перед посадкой нового пациента)
+        this.stepMode = false;
+
         // Пациент, стоящий на улице (ожидает решения о входе)
         this.streetPatient = null;
 
@@ -176,6 +179,18 @@ class SimulationEngine {
     }
 
     /**
+     * Вычислить задержку перед тем, как новый пациент займёт освободившийся стул.
+     * - В пошаговом режиме: 1 минута симуляции (= 1 отдельный шаг)
+     * - В автоматическом режиме: 3% от среднего времени приёма
+     */
+    _getSeatDelay() {
+        if (this.stepMode) {
+            return 1;
+        }
+        return this.params.serviceTime * 0.03;
+    }
+
+    /**
      * Обработать окончание обслуживания.
      * Освобождается одно место у врача — если есть очередь, берём следующего.
      */
@@ -192,11 +207,11 @@ class SimulationEngine {
         // Добавляем в статистику
         this.statistics.addServedPatient(patient);
 
-        // Если есть пациенты в очереди — планируем их вход к врачу через небольшую задержку
+        // Если есть пациенты в очереди — планируем их вход к врачу через задержку,
         // чтобы визуализация успела показать освободившееся место
         if (!this.queue.isEmpty()) {
             const nextPatient = this.queue.dequeue();
-            this.eventQueue.schedule(this.currentTime + 1, EventType.SERVICE_START, {
+            this.eventQueue.schedule(this.currentTime + this._getSeatDelay(), EventType.SERVICE_START, {
                 doctorId: doctor.id,
                 patient: nextPatient
             });

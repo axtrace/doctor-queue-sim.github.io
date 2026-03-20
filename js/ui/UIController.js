@@ -135,6 +135,7 @@ class UIController {
             };
 
             this.engine.initialize(params);
+            this.engine.stepMode = false;
             this.engine.onUpdate = (state) => this.updateUI(state);
             this.engine.start();
 
@@ -150,7 +151,8 @@ class UIController {
             this._lastFrameTime = performance.now();
             this.runSimulation();
         } else if (this.engine.isPaused) {
-            // Продолжаем симуляцию
+            // Продолжаем симуляцию в автоматическом режиме
+            this.engine.stepMode = false;
             this.engine.resume();
             this.pauseBtn.textContent = 'Пауза';
             this._lastFrameTime = performance.now();
@@ -189,6 +191,7 @@ class UIController {
             };
 
             this.engine.initialize(params);
+            this.engine.stepMode = true;
             this.engine.onUpdate = (state) => this.updateUI(state);
             this.engine.start();
             this.engine.pause();
