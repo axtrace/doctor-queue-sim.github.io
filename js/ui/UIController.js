@@ -135,11 +135,13 @@ class UIController {
             this.stepBtn.disabled = false;
             this.pauseBtn.textContent = 'Пауза';
 
+            this._lastFrameTime = performance.now();
             this.runSimulation();
         } else if (this.engine.isPaused) {
             // Продолжаем симуляцию
             this.engine.resume();
             this.pauseBtn.textContent = 'Пауза';
+            this._lastFrameTime = performance.now();
             this.runSimulation();
         }
     }
@@ -247,32 +249,43 @@ class UIController {
      *
      * Логика скорости:
      *   timeScale = сколько секунд реального времени соответствует 1 часу симуляции.
-     *   При timeScale=10: 1 час симуляции = 10 сек реального времени.
-     *   При 60 FPS один кадр = 1/60 сек ≈ 0.0167 сек реального времени.
-     *   За один кадр нужно продвинуть симуляцию на: 60 / timeScale / 60 часов = 1/timeScale часов
-     *   = 60/timeScale минут симуляции за кадр.
+     *   При timeScale=1: 1 час симуляции = 1 сек реального времени → быстро.
+     *   При timeScale=5: 1 час симуляции = 5 сек реального времени → медленнее.
      *
-     *   Выполняем события пока currentTime не превысит targetTime.
+     *   Используем performance.now() для точного отслеживания реального времени.
+     *   За прошедшее реальное время dt (в секундах) продвигаем симуляцию на:
+     *   dt / timeScale * 60 минут симуляции.
+     *
+     *   Выполняем все события до targetTime, затем продвигаем currentTime до targetTime.
      */
     runSimulation() {
         if (!this.engine.isRunning || this.engine.isPaused) {
             return;
         }
 
-        // Минут симуляции за один кадр (при 60 FPS)
-        const simMinutesPerFrame = 60 / this.timeScale;
+        const now = performance.now();
+        const dtReal = (now - this._lastFrameTime) / 1000; // секунды реального времени
+        this._lastFrameTime = now;
+
+        // Минут симуляции за прошедший кадр
+        const simMinutesPerFrame = (dtReal / this.timeScale) * 60;
         const targetTime = this.engine.currentTime + simMinutesPerFrame;
 
-        while (this.engine.currentTime < targetTime) {
-            // Проверяем, не выйдет ли следующее событие за targetTime
+        // Выполняем все события до targetTime
+        while (true) {
             const nextEvent = this.engine.eventQueue.peek();
-            if (nextEvent && nextEvent.time > targetTime) {
+            if (!nextEvent || nextEvent.time > targetTime) {
                 break;
             }
             if (!this.engine.step()) {
                 this.handleStop();
                 return;
             }
+        }
+
+        // Продвигаем currentTime до targetTime, даже если событий не было
+        if (this.engine.currentTime < targetTime) {
+            this.engine.currentTime = targetTime;
         }
 
         this.animationFrameId = requestAnimationFrame(() => this.runSimulation());
